@@ -38,7 +38,6 @@ if(IOS)
         XCODE_ATTRIBUTE_DEVELOPMENT_TEAM "4D6V9Q7PN2"
         XCODE_ATTRIBUTE_CODE_SIGN_IDENTITY "iPhone Developer"
         XCODE_ATTRIBUTE_IPHONEOS_DEPLOYMENT_TARGET "13.0"
-        QT_IOS_LAUNCH_SCREEN "${CMAKE_CURRENT_SOURCE_DIR}/LaunchScreen.storyboard"
     )
 
     # Import all required Qt plugins statically for iOS
