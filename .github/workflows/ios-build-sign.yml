@@ -219,7 +219,9 @@ jobs:
         for framework in "$APP_BUNDLE_PATH"/Frameworks/*.framework; do
           if [ -d "$framework" ]; then
             echo "  Signing $(basename "$framework")"
-            # Use --generate-entitlement-der for iOS 15+ compatibility
+            # Remove old signature completely
+            codesign --remove-signature "$framework" 2>/dev/null || true
+            # Re-sign with modern format
             codesign --force --sign "$SIGNING_IDENTITY" --generate-entitlement-der --timestamp=none "$framework"
           fi
         done
