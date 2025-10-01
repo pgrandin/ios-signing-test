@@ -1,6 +1,10 @@
 #include <QGuiApplication>
 #include <QQmlApplicationEngine>
 #include <QDebug>
+#include <QtPlugin>
+
+// Statically import the iOS platform plugin
+Q_IMPORT_PLUGIN(QIOSIntegrationPlugin)
 
 int main(int argc, char *argv[])
 {
