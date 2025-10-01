@@ -22,15 +22,8 @@ jobs:
 
     - name: Install dependencies
       run: |
-        # Install Qt6 for iOS
-        brew install qt@6
-
         # Install ios-deploy for device deployment (optional)
         brew install ios-deploy
-
-        # Set Qt environment variables
-        echo "Qt6_DIR=$(brew --prefix qt@6)/lib/cmake/Qt6" >> $GITHUB_ENV
-        echo "CMAKE_PREFIX_PATH=$(brew --prefix qt@6)" >> $GITHUB_ENV
 
     - name: Import certificates
       env:
@@ -106,50 +99,69 @@ jobs:
         # Save profile path for signing
         echo "PROVISION_PROFILE=~/Library/MobileDevice/Provisioning\ Profiles/profile.mobileprovision" >> $GITHUB_ENV
 
-    - name: Build Qt6 iOS app with CMake
+    - name: Build native iOS app
       run: |
-        # Build Qt6 app using CMake
-        echo "Building Qt6 iOS app with CMake..."
+        # Build native iOS UIKit app
+        echo "Building native iOS app..."
 
         # Create build directory
         mkdir -p build
-        cd build
-
-        # Configure with CMake for iOS
-        cmake ../qt-app \
-          -DCMAKE_SYSTEM_NAME=iOS \
-          -DCMAKE_OSX_DEPLOYMENT_TARGET=13.0 \
-          -DCMAKE_OSX_ARCHITECTURES=arm64 \
-          -DCMAKE_BUILD_TYPE=Release \
-          -DCMAKE_PREFIX_PATH="$(brew --prefix qt@6)" \
-          -DQT_HOST_PATH="$(brew --prefix qt@6)" \
-          -G Xcode
-
-        # Build the app
-        cmake --build . --config Release
-
-        # Find the generated app bundle
-        APP_BUNDLE=$(find . -name "*.app" -type d | head -1)
-        echo "Found app bundle: $APP_BUNDLE"
-
-        # Move to build root for consistency
-        if [ -f "$APP_BUNDLE" ]; then
-          cp -R "$APP_BUNDLE" ../build/HelloWorldQt6.app
-          APP_BUNDLE_PATH="../build/HelloWorldQt6.app"
-        else
-          APP_BUNDLE_PATH="$APP_BUNDLE"
-        fi
-
-        cd ..
 
         # Extract bundle ID from provisioning profile
         BUNDLE_ID=$(security cms -D -i ~/Library/MobileDevice/Provisioning\ Profiles/profile.mobileprovision | plutil -extract Entitlements.application-identifier raw - | sed 's/^[^.]*\.//')
         echo "Extracted Bundle ID: $BUNDLE_ID"
 
-        # Update Info.plist with correct bundle ID
-        /usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier $BUNDLE_ID" "$APP_BUNDLE_PATH/Info.plist" || true
+        # Compile Objective-C app for iOS
+        xcrun -sdk iphoneos clang \
+          -arch arm64 \
+          -miphoneos-version-min=13.0 \
+          -fobjc-arc \
+          -framework UIKit \
+          -framework Foundation \
+          -o build/HelloWorld \
+          ios-app/main.m
 
-        echo "APP_BUNDLE_PATH=$APP_BUNDLE_PATH" >> $GITHUB_ENV
+        # Create app bundle structure
+        mkdir -p build/HelloWorld.app
+        cp build/HelloWorld build/HelloWorld.app/
+
+        # Create Info.plist
+        cat > build/HelloWorld.app/Info.plist << EOF
+        <?xml version="1.0" encoding="UTF-8"?>
+        <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+        <plist version="1.0">
+        <dict>
+          <key>CFBundleExecutable</key>
+          <string>HelloWorld</string>
+          <key>CFBundleIdentifier</key>
+          <string>$BUNDLE_ID</string>
+          <key>CFBundleName</key>
+          <string>HelloWorld</string>
+          <key>CFBundleDisplayName</key>
+          <string>Hello World</string>
+          <key>CFBundleVersion</key>
+          <string>1.0</string>
+          <key>CFBundleShortVersionString</key>
+          <string>1.0</string>
+          <key>CFBundlePackageType</key>
+          <string>APPL</string>
+          <key>MinimumOSVersion</key>
+          <string>13.0</string>
+          <key>UIRequiredDeviceCapabilities</key>
+          <array>
+            <string>arm64</string>
+          </array>
+          <key>UISupportedInterfaceOrientations</key>
+          <array>
+            <string>UIInterfaceOrientationPortrait</string>
+            <string>UIInterfaceOrientationLandscapeLeft</string>
+            <string>UIInterfaceOrientationLandscapeRight</string>
+          </array>
+        </dict>
+        </plist>
+        EOF
+
+        echo "APP_BUNDLE_PATH=build/HelloWorld.app" >> $GITHUB_ENV
         echo "BUNDLE_ID=$BUNDLE_ID" >> $GITHUB_ENV
 
     - name: Create entitlements file
@@ -195,18 +207,18 @@ jobs:
         cp -R "$APP_BUNDLE_PATH" output/Payload/
 
         # Create IPA
-        (cd output && zip -qr HelloWorldQt6.ipa Payload)
+        (cd output && zip -qr HelloWorld.ipa Payload)
 
         # Cleanup
         rm -rf output/Payload
 
-        echo "IPA created at: output/HelloWorldQt6.ipa"
+        echo "IPA created at: output/HelloWorld.ipa"
 
     - name: Upload signed IPA
       uses: actions/upload-artifact@v4
       with:
         name: signed-ios-app
-        path: output/HelloWorldQt6.ipa
+        path: output/HelloWorld.ipa
         retention-days: 30
 
     - name: Upload build artifacts
