@@ -25,6 +25,19 @@ jobs:
         # Install ios-deploy for device deployment (optional)
         brew install ios-deploy
 
+        # Install aqtinstall for Qt6 iOS
+        pip3 install --break-system-packages aqtinstall
+
+        # Install Qt6 for macOS (host tools needed for cross-compilation)
+        aqt install-qt mac desktop 6.8.1 clang_64 --outputdir $GITHUB_WORKSPACE/Qt
+
+        # Install Qt6 for iOS (target platform)
+        aqt install-qt mac ios 6.8.1 --outputdir $GITHUB_WORKSPACE/Qt
+
+        # Set Qt paths
+        echo "QT_HOST_PATH=$GITHUB_WORKSPACE/Qt/6.8.1/macos" >> $GITHUB_ENV
+        echo "QT_PATH=$GITHUB_WORKSPACE/Qt/6.8.1/ios" >> $GITHUB_ENV
+
     - name: Import certificates
       env:
         P12_BASE64: ${{ secrets.IOS_CERTIFICATE_P12_BASE64 }}
@@ -99,59 +112,64 @@ jobs:
         # Save profile path for signing
         echo "PROVISION_PROFILE=~/Library/MobileDevice/Provisioning\ Profiles/profile.mobileprovision" >> $GITHUB_ENV
 
-    - name: Build iOS app from source
+    - name: Build Qt6 iOS app with CMake
       run: |
-        # Compile the app from source
-        echo "Building iOS app from main.c..."
+        # Build Qt6 app with CMake
+        echo "Building Qt6 iOS app with CMake..."
 
-        # Create build directory
-        mkdir -p build
-
-        # Compile for arm64 (iOS device)
-        xcrun -sdk iphoneos clang \
-          -arch arm64 \
-          -miphoneos-version-min=13.0 \
-          -o build/SampleApp \
-          app/main.c
-
-        # Create app bundle structure
-        mkdir -p build/SampleApp.app
-        cp build/SampleApp build/SampleApp.app/
-
-        # Extract bundle ID from provisioning profile (remove team prefix)
+        # Extract bundle ID from provisioning profile
         BUNDLE_ID=$(security cms -D -i ~/Library/MobileDevice/Provisioning\ Profiles/profile.mobileprovision | plutil -extract Entitlements.application-identifier raw - | sed 's/^[^.]*\.//')
         echo "Extracted Bundle ID: $BUNDLE_ID"
 
-        # Create Info.plist
-        cat > build/SampleApp.app/Info.plist << EOF
-        <?xml version="1.0" encoding="UTF-8"?>
-        <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-        <plist version="1.0">
-        <dict>
-          <key>CFBundleExecutable</key>
-          <string>SampleApp</string>
-          <key>CFBundleIdentifier</key>
-          <string>$BUNDLE_ID</string>
-          <key>CFBundleName</key>
-          <string>SampleApp</string>
-          <key>CFBundleVersion</key>
-          <string>1.0</string>
-          <key>CFBundleShortVersionString</key>
-          <string>1.0</string>
-          <key>CFBundlePackageType</key>
-          <string>APPL</string>
-          <key>MinimumOSVersion</key>
-          <string>13.0</string>
-          <key>UIRequiredDeviceCapabilities</key>
-          <array>
-            <string>arm64</string>
-          </array>
-        </dict>
-        </plist>
-        EOF
+        # Use Qt6 installed via aqt
+        echo "Qt6 path: $QT_PATH"
+        ls -la "$QT_PATH"
 
-        echo "APP_BUNDLE_PATH=build/SampleApp.app" >> $GITHUB_ENV
+        # Create build directory
+        mkdir -p build
+        cd build
+
+        # Configure with CMake for iOS using Qt6 toolchain
+        cmake ../qt-app \
+          -DCMAKE_PREFIX_PATH="$QT_PATH" \
+          -DCMAKE_TOOLCHAIN_FILE="$QT_PATH/lib/cmake/Qt6/qt.toolchain.cmake" \
+          -DCMAKE_BUILD_TYPE=Release \
+          -DQT_HOST_PATH="$QT_HOST_PATH" \
+          -DCMAKE_XCODE_ATTRIBUTE_DEVELOPMENT_TEAM="4D6V9Q7PN2" \
+          -DCMAKE_XCODE_ATTRIBUTE_CODE_SIGN_IDENTITY="iPhone Developer" \
+          -DCMAKE_XCODE_ATTRIBUTE_PRODUCT_BUNDLE_IDENTIFIER="$BUNDLE_ID" \
+          -G Xcode
+
+        # Build with xcodebuild
+        xcodebuild \
+          -project HelloWorldQt6.xcodeproj \
+          -scheme HelloWorldQt6 \
+          -configuration Release \
+          -sdk iphoneos \
+          -arch arm64 \
+          CODE_SIGN_IDENTITY="" \
+          CODE_SIGNING_REQUIRED=NO \
+          CODE_SIGNING_ALLOWED=NO
+
+        # Find the built app (remove ./ prefix)
+        APP_BUNDLE_REL=$(find . -name "HelloWorldQt6.app" -type d | head -1 | sed 's|^./||')
+        echo "Built app at: $APP_BUNDLE_REL"
+
+        # Update Info.plist with correct bundle ID
+        /usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier $BUNDLE_ID" "$APP_BUNDLE_REL/Info.plist"
+
+        cd ..
+        echo "APP_BUNDLE_PATH=build/$APP_BUNDLE_REL" >> $GITHUB_ENV
         echo "BUNDLE_ID=$BUNDLE_ID" >> $GITHUB_ENV
+
+    - name: Check if app uses dynamic frameworks
+      run: |
+        cd build
+        APP_BUNDLE=$(find . -name "*.app" -type d | head -1)
+        EXECUTABLE=$(find "$APP_BUNDLE" -type f -perm +111 | grep -v "/_" | head -1)
+
+        echo "Checking app dependencies..."
+        otool -L "$EXECUTABLE" | grep -i qt || echo "No dynamic Qt dependencies found (fully static)"
 
     - name: Create entitlements file
       run: |
@@ -172,7 +190,8 @@ jobs:
         # Remove extended attributes
         xattr -cr "$APP_BUNDLE_PATH"
 
-        # Sign the app
+        # Sign the app bundle (no frameworks to sign - fully static)
+        echo "Signing static app bundle..."
         codesign --force \
           --sign "$SIGNING_IDENTITY" \
           --entitlements "$ENTITLEMENTS_PATH" \
@@ -196,18 +215,18 @@ jobs:
         cp -R "$APP_BUNDLE_PATH" output/Payload/
 
         # Create IPA
-        (cd output && zip -qr SampleApp.ipa Payload)
+        (cd output && zip -qr HelloWorld.ipa Payload)
 
         # Cleanup
         rm -rf output/Payload
 
-        echo "IPA created at: output/SampleApp.ipa"
+        echo "IPA created at: output/HelloWorld.ipa"
 
     - name: Upload signed IPA
       uses: actions/upload-artifact@v4
       with:
         name: signed-ios-app
-        path: output/SampleApp.ipa
+        path: output/HelloWorld.ipa
         retention-days: 30
 
     - name: Upload build artifacts
@@ -215,7 +234,7 @@ jobs:
       with:
         name: build-artifacts
         path: |
-          build/SampleApp.app
+          ${{ env.APP_BUNDLE_PATH }}
           build/Entitlements.plist
         retention-days: 7
 
