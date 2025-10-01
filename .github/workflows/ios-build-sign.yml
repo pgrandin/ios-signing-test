@@ -162,6 +162,46 @@ jobs:
         echo "APP_BUNDLE_PATH=build/$APP_BUNDLE_REL" >> $GITHUB_ENV
         echo "BUNDLE_ID=$BUNDLE_ID" >> $GITHUB_ENV
 
+    - name: Deploy Qt frameworks to app bundle
+      run: |
+        cd build
+        APP_BUNDLE=$(find . -name "*.app" -type d | head -1)
+
+        echo "Deploying Qt frameworks to: $APP_BUNDLE"
+
+        # Create Frameworks directory
+        mkdir -p "$APP_BUNDLE/Frameworks"
+
+        # Copy essential Qt frameworks
+        for FW in QtCore QtGui QtQuick QtQml QtNetwork QtQmlModels QtOpenGL; do
+          if [ -d "$QT_PATH/lib/${FW}.framework" ]; then
+            echo "  Copying ${FW}.framework"
+            cp -R "$QT_PATH/lib/${FW}.framework" "$APP_BUNDLE/Frameworks/"
+            # Remove headers/modules to reduce size
+            rm -rf "$APP_BUNDLE/Frameworks/${FW}.framework/Headers" 2>/dev/null || true
+            rm -rf "$APP_BUNDLE/Frameworks/${FW}.framework/Modules" 2>/dev/null || true
+          fi
+        done
+
+        # Copy iOS platform plugin - CRITICAL
+        echo "  Copying iOS platform plugin"
+        mkdir -p "$APP_BUNDLE/PlugIns/platforms"
+        if [ -d "$QT_PATH/plugins/platforms" ]; then
+          cp -R "$QT_PATH/plugins/platforms/"* "$APP_BUNDLE/PlugIns/platforms/" 2>/dev/null || true
+        fi
+
+        # Copy QML imports
+        echo "  Copying QML modules"
+        mkdir -p "$APP_BUNDLE/qml"
+        for QML in QtQuick QtQml; do
+          if [ -d "$QT_PATH/qml/$QML" ]; then
+            cp -R "$QT_PATH/qml/$QML" "$APP_BUNDLE/qml/" 2>/dev/null || true
+          fi
+        done
+
+        echo "Qt framework deployment complete"
+        ls -la "$APP_BUNDLE" | head -20
+
     - name: Create entitlements file
       run: |
         # Extract entitlements from provisioning profile
