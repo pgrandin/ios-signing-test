@@ -118,8 +118,8 @@ jobs:
         mkdir -p build/SampleApp.app
         cp build/SampleApp build/SampleApp.app/
 
-        # Extract bundle ID from provisioning profile
-        BUNDLE_ID=$(security cms -D -i ~/Library/MobileDevice/Provisioning\ Profiles/profile.mobileprovision | plutil -extract Entitlements.application-identifier raw - | sed 's/.*\.//')
+        # Extract bundle ID from provisioning profile (remove team prefix)
+        BUNDLE_ID=$(security cms -D -i ~/Library/MobileDevice/Provisioning\ Profiles/profile.mobileprovision | plutil -extract Entitlements.application-identifier raw - | sed 's/^[^.]*\.//')
         echo "Extracted Bundle ID: $BUNDLE_ID"
 
         # Create Info.plist
