@@ -5,18 +5,20 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_AUTOMOC ON)
 
-# Find Qt6 - just Core and Gui, no QML
-find_package(Qt6 REQUIRED COMPONENTS Core Gui)
+# Find Qt6 - Core, Gui, and QML components
+find_package(Qt6 REQUIRED COMPONENTS Core Gui Qml Quick)
 
 # Create executable
 qt_add_executable(HelloWorldQt6
     main.cpp
 )
 
-# Link Qt libraries - minimal set
+# Link Qt libraries
 target_link_libraries(HelloWorldQt6 PRIVATE
     Qt6::Core
     Qt6::Gui
+    Qt6::Qml
+    Qt6::Quick
 )
 
 # iOS specific settings
