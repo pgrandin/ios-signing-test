@@ -1,25 +1,12 @@
-#include <QApplication>
-#include <QLabel>
-#include <QVBoxLayout>
-#include <QWidget>
+#include <QGuiApplication>
+#include <QQmlApplicationEngine>
 
 int main(int argc, char *argv[])
 {
-    QApplication app(argc, argv);
-
-    QWidget window;
-    window.setWindowTitle("Qt6 Hello World");
-
-    QVBoxLayout *layout = new QVBoxLayout(&window);
-
-    QLabel *label = new QLabel("Hello World from Qt6 on iOS!");
-    label->setAlignment(Qt::AlignCenter);
-    label->setStyleSheet("font-size: 24px; padding: 20px;");
-
-    layout->addWidget(label);
-
-    window.resize(300, 200);
-    window.show();
-
+    QGuiApplication app(argc, argv);
+    QQmlApplicationEngine engine;
+    engine.load(QUrl(QStringLiteral("qrc:/main.qml")));
+    if (engine.rootObjects().isEmpty())
+        return -1;
     return app.exec();
 }
