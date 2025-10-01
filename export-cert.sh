@@ -51,35 +51,44 @@ security export -k login.keychain-db \
 }
 
 # Fix P12 format for compatibility
-echo "Fixing P12 format..."
+echo "Fixing P12 format for GitHub Actions..."
 # Extract all contents to PEM (use legacy provider for old ciphers)
 openssl pkcs12 \
   -in "$OUTPUT_DIR/ios-cert.p12" \
   -passin pass:"$P12_PASSWORD" \
   -out "$OUTPUT_DIR/cert-temp.pem" \
   -nodes \
-  -legacy
+  -legacy 2>/dev/null || {
+    echo "Warning: Could not extract with legacy mode, trying without..."
+    openssl pkcs12 \
+      -in "$OUTPUT_DIR/ios-cert.p12" \
+      -passin pass:"$P12_PASSWORD" \
+      -out "$OUTPUT_DIR/cert-temp.pem" \
+      -nodes
+  }
 
-# Re-export with legacy mode for macOS compatibility
+# Re-export with modern encryption (AES256) for better compatibility
 openssl pkcs12 \
   -export \
-  -legacy \
   -in "$OUTPUT_DIR/cert-temp.pem" \
   -passout pass:"$P12_PASSWORD" \
-  -out "$OUTPUT_DIR/ios-cert-fixed.p12"
+  -out "$OUTPUT_DIR/ios-cert-fixed.p12" \
+  -macalg SHA256 \
+  -keypbe AES-256-CBC \
+  -certpbe AES-256-CBC
 
 # Replace original with fixed version
 mv "$OUTPUT_DIR/ios-cert-fixed.p12" "$OUTPUT_DIR/ios-cert.p12"
 rm "$OUTPUT_DIR/cert-temp.pem"
 
-# Encode certificate to base64
+# Encode certificate to base64 (remove line breaks)
 echo "Encoding certificate to base64..."
-cat "$OUTPUT_DIR/ios-cert.p12" | base64 > "$OUTPUT_DIR/cert-base64.txt"
+cat "$OUTPUT_DIR/ios-cert.p12" | base64 | tr -d '\n' > "$OUTPUT_DIR/cert-base64.txt"
 
-# Encode provisioning profile to base64
+# Encode provisioning profile to base64 (remove line breaks)
 echo "Encoding provisioning profile to base64..."
 if [[ -f "$PROVISION_PROFILE" ]]; then
-    cat "$PROVISION_PROFILE" | base64 > "$OUTPUT_DIR/provision-base64.txt"
+    cat "$PROVISION_PROFILE" | base64 | tr -d '\n' > "$OUTPUT_DIR/provision-base64.txt"
 else
     echo "⚠️  Warning: $PROVISION_PROFILE not found"
 fi

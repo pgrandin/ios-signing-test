@@ -36,6 +36,17 @@ jobs:
         # Decode P12 certificate from base64
         echo "$P12_BASE64" | base64 --decode > ~/certs/certificate.p12
 
+        # Verify P12 file was created
+        ls -lh ~/certs/certificate.p12
+        echo "P12 file size: $(wc -c < ~/certs/certificate.p12) bytes"
+
+        # Test P12 password with openssl first
+        echo "Testing P12 file with openssl..."
+        openssl pkcs12 -in ~/certs/certificate.p12 -passin "pass:$P12_PASSWORD" -noout -info || {
+          echo "ERROR: Failed to read P12 with openssl"
+          exit 1
+        }
+
         # Create temporary keychain
         KEYCHAIN_NAME="ios-build.keychain-db"
         KEYCHAIN_PASSWORD=$(openssl rand -base64 32)
@@ -45,12 +56,11 @@ jobs:
         security set-keychain-settings -lut 21600 "$KEYCHAIN_NAME"
         security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_NAME"
 
-        # Import certificate
+        # Import certificate (use -A to allow all apps)
         security import ~/certs/certificate.p12 \
           -k "$KEYCHAIN_NAME" \
           -P "$P12_PASSWORD" \
-          -T /usr/bin/codesign \
-          -T /usr/bin/security
+          -A
 
         # Set key partition list
         security set-key-partition-list \
