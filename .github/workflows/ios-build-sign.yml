@@ -25,8 +25,14 @@ jobs:
         # Install ios-deploy for device deployment (optional)
         brew install ios-deploy
 
-        # Install Qt6 for iOS
-        brew install qt6
+        # Install aqtinstall for Qt6 iOS
+        pip3 install aqtinstall
+
+        # Install Qt6 for iOS (official binaries with iOS support)
+        aqt install-qt mac ios 6.8.1 ios -m qtdeclarative qtquickcontrols2
+
+        # Set Qt path
+        echo "QT_PATH=$PWD/6.8.1/ios" >> $GITHUB_ENV
 
     - name: Import certificates
       env:
@@ -111,21 +117,20 @@ jobs:
         BUNDLE_ID=$(security cms -D -i ~/Library/MobileDevice/Provisioning\ Profiles/profile.mobileprovision | plutil -extract Entitlements.application-identifier raw - | sed 's/^[^.]*\.//')
         echo "Extracted Bundle ID: $BUNDLE_ID"
 
-        # Find Qt6 installation
-        QT_PATH=$(brew --prefix qt6)
+        # Use Qt6 installed via aqt
         echo "Qt6 path: $QT_PATH"
+        ls -la "$QT_PATH"
 
         # Create build directory
         mkdir -p build
         cd build
 
-        # Configure with CMake for iOS
+        # Configure with CMake for iOS using Qt6 toolchain
         cmake ../qt-app \
           -DCMAKE_PREFIX_PATH="$QT_PATH" \
-          -DCMAKE_SYSTEM_NAME=iOS \
-          -DCMAKE_OSX_DEPLOYMENT_TARGET=13.0 \
-          -DCMAKE_OSX_ARCHITECTURES=arm64 \
+          -DCMAKE_TOOLCHAIN_FILE="$QT_PATH/lib/cmake/Qt6/qt.toolchain.cmake" \
           -DCMAKE_BUILD_TYPE=Release \
+          -DQT_HOST_PATH="$QT_PATH" \
           -DCMAKE_XCODE_ATTRIBUTE_DEVELOPMENT_TEAM="4D6V9Q7PN2" \
           -DCMAKE_XCODE_ATTRIBUTE_CODE_SIGN_IDENTITY="iPhone Developer" \
           -DCMAKE_XCODE_ATTRIBUTE_PRODUCT_BUNDLE_IDENTIFIER="$BUNDLE_ID" \
