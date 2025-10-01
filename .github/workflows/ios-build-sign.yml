@@ -189,15 +189,8 @@ jobs:
           fi
         done
 
-        # Copy iOS platform plugin - CRITICAL
-        echo "  Copying iOS platform plugin"
-        mkdir -p "$APP_BUNDLE/PlugIns/platforms"
-        if [ -d "$QT_PATH/plugins/platforms" ]; then
-          cp -R "$QT_PATH/plugins/platforms/"* "$APP_BUNDLE/PlugIns/platforms/" 2>/dev/null || true
-        fi
-
-        # Skip QML modules entirely - they are statically linked
-        echo "  Skipping QML modules (statically linked)"
+        # Don't copy plugins - they are statically linked in the binary
+        echo "  Plugins are statically linked, skipping copy"
 
         echo "Qt framework deployment complete"
         ls -la "$APP_BUNDLE" | head -20
