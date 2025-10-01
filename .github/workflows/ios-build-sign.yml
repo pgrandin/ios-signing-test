@@ -151,15 +151,15 @@ jobs:
           CODE_SIGNING_REQUIRED=NO \
           CODE_SIGNING_ALLOWED=NO
 
-        # Find the built app
-        APP_BUNDLE_PATH=$(find . -name "HelloWorldQt6.app" -type d | head -1)
-        echo "Built app at: $APP_BUNDLE_PATH"
+        # Find the built app (remove ./ prefix)
+        APP_BUNDLE_REL=$(find . -name "HelloWorldQt6.app" -type d | head -1 | sed 's|^./||')
+        echo "Built app at: $APP_BUNDLE_REL"
 
         # Update Info.plist with correct bundle ID
-        /usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier $BUNDLE_ID" "$APP_BUNDLE_PATH/Info.plist"
+        /usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier $BUNDLE_ID" "$APP_BUNDLE_REL/Info.plist"
 
         cd ..
-        echo "APP_BUNDLE_PATH=build/$APP_BUNDLE_PATH" >> $GITHUB_ENV
+        echo "APP_BUNDLE_PATH=build/$APP_BUNDLE_REL" >> $GITHUB_ENV
         echo "BUNDLE_ID=$BUNDLE_ID" >> $GITHUB_ENV
 
     - name: Create entitlements file
