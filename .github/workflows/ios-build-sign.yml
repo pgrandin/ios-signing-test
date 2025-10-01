@@ -214,12 +214,13 @@ jobs:
         # Remove extended attributes
         xattr -cr "$APP_BUNDLE_PATH"
 
-        # Sign all frameworks first
+        # Sign all frameworks first with modern signature
         echo "Signing Qt frameworks..."
         for framework in "$APP_BUNDLE_PATH"/Frameworks/*.framework; do
           if [ -d "$framework" ]; then
             echo "  Signing $(basename "$framework")"
-            codesign --force --sign "$SIGNING_IDENTITY" --timestamp=none "$framework"
+            # Use --generate-entitlement-der for iOS 15+ compatibility
+            codesign --force --sign "$SIGNING_IDENTITY" --generate-entitlement-der --timestamp=none "$framework"
           fi
         done
 
