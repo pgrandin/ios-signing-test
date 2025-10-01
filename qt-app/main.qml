@@ -5,28 +5,32 @@ Window {
     visible: true
     width: 390
     height: 844
-    title: "Hello World"
+    title: "Qt6 iOS App"
+    color: "#4CAF50"
 
     Rectangle {
-        anchors.fill: parent
-        color: "#f5f5f5"
+        anchors.centerIn: parent
+        width: 300
+        height: 200
+        color: "white"
+        radius: 20
 
         Column {
             anchors.centerIn: parent
             spacing: 20
 
             Text {
-                text: "Hello World from Qt6!"
-                font.pixelSize: 32
+                text: "✅ Qt6 Works!"
+                font.pixelSize: 36
                 font.bold: true
-                color: "#007AFF"
+                color: "#4CAF50"
                 anchors.horizontalCenter: parent.horizontalCenter
             }
 
             Text {
-                text: "Built with GitHub Actions + CMake"
-                font.pixelSize: 16
-                color: "#666666"
+                text: "Hello from iOS"
+                font.pixelSize: 24
+                color: "#666"
                 anchors.horizontalCenter: parent.horizontalCenter
             }
         }
