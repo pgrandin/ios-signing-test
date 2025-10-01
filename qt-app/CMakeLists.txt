@@ -8,9 +8,16 @@ set(CMAKE_AUTOMOC ON)
 # Find Qt6 - Core, Gui, and QML components
 find_package(Qt6 REQUIRED COMPONENTS Core Gui Qml Quick)
 
-# Create executable
+# Create executable with QML module (modern Qt6 way)
 qt_add_executable(HelloWorldQt6
     main.cpp
+)
+
+qt_add_qml_module(HelloWorldQt6
+    URI HelloWorldApp
+    VERSION 1.0
+    QML_FILES main.qml
+    NO_PLUGIN
 )
 
 # Link Qt libraries
