@@ -1,7 +1,8 @@
 #include <QGuiApplication>
-#include <QQmlApplicationEngine>
-#include <QDebug>
+#include <QWindow>
+#include <QScreen>
 #include <QtPlugin>
+#include <QDebug>
 
 // Statically import the iOS platform plugin
 Q_IMPORT_PLUGIN(QIOSIntegrationPlugin)
@@ -9,25 +10,18 @@ Q_IMPORT_PLUGIN(QIOSIntegrationPlugin)
 int main(int argc, char *argv[])
 {
     qDebug() << "Qt6 App Starting...";
+
     QGuiApplication app(argc, argv);
-    qDebug() << "QGuiApplication created";
+    qDebug() << "QGuiApplication created successfully!";
 
-    QQmlApplicationEngine engine;
-    qDebug() << "QQmlApplicationEngine created";
+    // Create a simple window without QML
+    QWindow window;
+    window.setTitle("Qt6 Works!");
+    window.resize(390, 844);
+    window.show();
 
-    // Try loading QML
-    QUrl qmlUrl(QStringLiteral("qrc:/qt/qml/HelloWorldQt6/main.qml"));
-    qDebug() << "Loading QML from:" << qmlUrl;
+    qDebug() << "Window created and shown!";
+    qDebug() << "Event loop starting...";
 
-    engine.load(qmlUrl);
-
-    qDebug() << "QML loaded, root objects count:" << engine.rootObjects().size();
-
-    if (engine.rootObjects().isEmpty()) {
-        qDebug() << "ERROR: No root objects found!";
-        return -1;
-    }
-
-    qDebug() << "Starting event loop...";
     return app.exec();
 }
