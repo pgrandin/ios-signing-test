@@ -47,6 +47,10 @@ jobs:
           exit 1
         }
 
+        # Extract certificate and key from P12 using openssl (security command doesn't support PBES2)
+        echo "Extracting certificate and key with openssl..."
+        openssl pkcs12 -in ~/certs/certificate.p12 -passin "pass:$P12_PASSWORD" -out ~/certs/cert-and-key.pem -nodes
+
         # Create temporary keychain
         KEYCHAIN_NAME="ios-build.keychain-db"
         KEYCHAIN_PASSWORD=$(openssl rand -base64 32)
@@ -56,10 +60,10 @@ jobs:
         security set-keychain-settings -lut 21600 "$KEYCHAIN_NAME"
         security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_NAME"
 
-        # Import certificate (use -A to allow all apps)
-        security import ~/certs/certificate.p12 \
+        # Import extracted certificate and key
+        security import ~/certs/cert-and-key.pem \
           -k "$KEYCHAIN_NAME" \
-          -P "$P12_PASSWORD" \
+          -P "" \
           -A
 
         # Set key partition list

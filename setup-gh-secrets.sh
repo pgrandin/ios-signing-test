@@ -35,7 +35,7 @@ if [[ ! -f "gha-secrets/GITHUB_SECRETS.txt" ]]; then
 fi
 
 # Extract password from GITHUB_SECRETS.txt
-P12_PASSWORD=$(grep -A 1 "IOS_CERTIFICATE_PASSWORD" gha-secrets/GITHUB_SECRETS.txt | tail -1 | xargs)
+P12_PASSWORD=$(grep -A 1 "IOS_CERTIFICATE_PASSWORD" gha-secrets/GITHUB_SECRETS.txt | grep "Secret Value:" | sed 's/^.*Secret Value:[[:space:]]*//')
 
 echo "Enter your GitHub repository (format: owner/repo):"
 read -r REPO
