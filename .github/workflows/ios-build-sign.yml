@@ -162,38 +162,14 @@ jobs:
         echo "APP_BUNDLE_PATH=build/$APP_BUNDLE_REL" >> $GITHUB_ENV
         echo "BUNDLE_ID=$BUNDLE_ID" >> $GITHUB_ENV
 
-    - name: Deploy Qt frameworks to app bundle
+    - name: Check if app uses dynamic frameworks
       run: |
         cd build
         APP_BUNDLE=$(find . -name "*.app" -type d | head -1)
+        EXECUTABLE=$(find "$APP_BUNDLE" -type f -perm +111 | grep -v "/_" | head -1)
 
-        echo "Deploying Qt frameworks to: $APP_BUNDLE"
-
-        # Create Frameworks directory
-        mkdir -p "$APP_BUNDLE/Frameworks"
-
-        # Copy essential Qt frameworks (release only, no debug)
-        for FW in QtCore QtGui QtQuick QtQml QtNetwork QtQmlModels QtOpenGL; do
-          if [ -d "$QT_PATH/lib/${FW}.framework" ]; then
-            echo "  Copying ${FW}.framework"
-            cp -R "$QT_PATH/lib/${FW}.framework" "$APP_BUNDLE/Frameworks/"
-            # Remove debug builds and unnecessary files
-            rm -f "$APP_BUNDLE/Frameworks/${FW}.framework/${FW}_debug" 2>/dev/null || true
-            rm -rf "$APP_BUNDLE/Frameworks/${FW}.framework/Headers" 2>/dev/null || true
-            rm -rf "$APP_BUNDLE/Frameworks/${FW}.framework/Modules" 2>/dev/null || true
-            rm -rf "$APP_BUNDLE/Frameworks/${FW}.framework/Versions" 2>/dev/null || true
-            # Keep only the release binary
-            if [ -f "$APP_BUNDLE/Frameworks/${FW}.framework/${FW}" ]; then
-              echo "    Release binary: $(du -h "$APP_BUNDLE/Frameworks/${FW}.framework/${FW}" | cut -f1)"
-            fi
-          fi
-        done
-
-        # Don't copy plugins - they are statically linked in the binary
-        echo "  Plugins are statically linked, skipping copy"
-
-        echo "Qt framework deployment complete"
-        ls -la "$APP_BUNDLE" | head -20
+        echo "Checking app dependencies..."
+        otool -L "$EXECUTABLE" | grep -i qt || echo "No dynamic Qt dependencies found (fully static)"
 
     - name: Create entitlements file
       run: |
@@ -214,20 +190,8 @@ jobs:
         # Remove extended attributes
         xattr -cr "$APP_BUNDLE_PATH"
 
-        # Sign all frameworks first with modern signature
-        echo "Signing Qt frameworks..."
-        for framework in "$APP_BUNDLE_PATH"/Frameworks/*.framework; do
-          if [ -d "$framework" ]; then
-            echo "  Signing $(basename "$framework")"
-            # Remove old signature completely
-            codesign --remove-signature "$framework" 2>/dev/null || true
-            # Re-sign with modern format
-            codesign --force --sign "$SIGNING_IDENTITY" --generate-entitlement-der --timestamp=none "$framework"
-          fi
-        done
-
-        # Sign the app bundle
-        echo "Signing app bundle..."
+        # Sign the app bundle (no frameworks to sign - fully static)
+        echo "Signing static app bundle..."
         codesign --force \
           --sign "$SIGNING_IDENTITY" \
           --entitlements "$ENTITLEMENTS_PATH" \
