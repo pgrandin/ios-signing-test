@@ -196,17 +196,8 @@ jobs:
           cp -R "$QT_PATH/plugins/platforms/"* "$APP_BUNDLE/PlugIns/platforms/" 2>/dev/null || true
         fi
 
-        # Copy QML imports (release only)
-        echo "  Copying QML modules"
-        mkdir -p "$APP_BUNDLE/qml"
-        for QML in QtQuick QtQml; do
-          if [ -d "$QT_PATH/qml/$QML" ]; then
-            cp -R "$QT_PATH/qml/$QML" "$APP_BUNDLE/qml/" 2>/dev/null || true
-          fi
-        done
-
-        # Remove all debug files from QML modules
-        find "$APP_BUNDLE/qml" -name "*_debug*" -delete 2>/dev/null || true
+        # Skip QML modules entirely - they are statically linked
+        echo "  Skipping QML modules (statically linked)"
 
         echo "Qt framework deployment complete"
         ls -la "$APP_BUNDLE" | head -20
