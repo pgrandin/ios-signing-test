@@ -26,13 +26,13 @@ jobs:
         brew install ios-deploy
 
         # Install aqtinstall for Qt6 iOS
-        pip3 install aqtinstall
+        pip3 install --break-system-packages aqtinstall
 
         # Install Qt6 for iOS (official binaries with iOS support)
-        aqt install-qt mac ios 6.8.1 ios -m qtdeclarative qtquickcontrols2
+        aqt install-qt mac ios 6.8.1 ios -m qtdeclarative qtquickcontrols2 --outputdir $GITHUB_WORKSPACE/Qt
 
         # Set Qt path
-        echo "QT_PATH=$PWD/6.8.1/ios" >> $GITHUB_ENV
+        echo "QT_PATH=$GITHUB_WORKSPACE/Qt/6.8.1/ios" >> $GITHUB_ENV
 
     - name: Import certificates
       env:
