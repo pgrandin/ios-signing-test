@@ -214,7 +214,17 @@ jobs:
         # Remove extended attributes
         xattr -cr "$APP_BUNDLE_PATH"
 
-        # Sign the app
+        # Sign all frameworks first
+        echo "Signing Qt frameworks..."
+        for framework in "$APP_BUNDLE_PATH"/Frameworks/*.framework; do
+          if [ -d "$framework" ]; then
+            echo "  Signing $(basename "$framework")"
+            codesign --force --sign "$SIGNING_IDENTITY" --timestamp=none "$framework"
+          fi
+        done
+
+        # Sign the app bundle
+        echo "Signing app bundle..."
         codesign --force \
           --sign "$SIGNING_IDENTITY" \
           --entitlements "$ENTITLEMENTS_PATH" \
