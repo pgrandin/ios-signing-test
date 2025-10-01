@@ -134,7 +134,7 @@ jobs:
           -DCMAKE_PREFIX_PATH="$QT_PATH" \
           -DCMAKE_TOOLCHAIN_FILE="$QT_PATH/lib/cmake/Qt6/qt.toolchain.cmake" \
           -DCMAKE_BUILD_TYPE=Release \
-          -DQT_HOST_PATH="$QT_PATH" \
+          -DQT_HOST_PATH="$QT_HOST_PATH" \
           -DCMAKE_XCODE_ATTRIBUTE_DEVELOPMENT_TEAM="4D6V9Q7PN2" \
           -DCMAKE_XCODE_ATTRIBUTE_CODE_SIGN_IDENTITY="iPhone Developer" \
           -DCMAKE_XCODE_ATTRIBUTE_PRODUCT_BUNDLE_IDENTIFIER="$BUNDLE_ID" \
