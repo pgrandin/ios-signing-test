@@ -9,13 +9,16 @@ set(CMAKE_AUTORCC ON)
 # Find Qt6
 find_package(Qt6 REQUIRED COMPONENTS Core Gui Quick Qml)
 
-# Qt resource file
-qt6_add_resources(QML_RESOURCES qml.qrc)
-
 # Create executable
-add_executable(HelloWorldQt6
+qt_add_executable(HelloWorldQt6
     main.cpp
-    ${QML_RESOURCES}
+)
+
+# Add QML module with resources
+qt_add_qml_module(HelloWorldQt6
+    URI HelloWorldQt6
+    VERSION 1.0
+    QML_FILES main.qml
 )
 
 # Link Qt libraries
